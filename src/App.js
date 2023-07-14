@@ -1,7 +1,7 @@
 import { BrowserRouter as ROuter, Switch, Route } from "react-router-dom";
 import '../node_modules/bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
-import Form from "./components/Form";
+import Form from "./components/form";
 
 function App() {
   return (

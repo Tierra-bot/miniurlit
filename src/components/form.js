@@ -1,5 +1,5 @@
 import React from 'react';
-import{ nanoid } from 'nanoid'
+import { nanoid } from 'nanoid'
 import { getDatabase, child, ref, set, get } from "firebase/database";
 import { isWebUri } from 'valid-url';
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
@@ -7,154 +7,142 @@ import Tooltip from "react-bootstrap/Tooltip";
 
 
 class Form extends React.Component {
-//for the text box information parameters 
 
-constructor(props) {
-    super(props);
-    this.state = {
-        longUrl: '',
-        preferedAlias:'',
-        loading: false,
-        errors: [],
-        errorMessage: {},
-        toolTipMessage: 'Copy to Clip Board'
+    constructor(props) {
+        super(props);
+        this.state = {
+            longURL: '',
+            preferedAlias: '',
+            generatedURL: '',
+            loading: false,
+            errors: [],
+            errorMessage: {},
+            toolTipMessage: 'Copy To Clip Board'
+        };
 
-    };
+    }
 
+    //When the user clicks submit, this will be called
+    onSubmit = async (event) => {
+        event.preventDefault(); //Prevents the page from reloading when submit is clicked
+        this.setState({
+            loading: true,
+            generatedURL: ''
+        })
 
-}
-
-
-//called when user hits submit
-onSubmit= async(Event) =>{
-    event.preventDefault(); //prevents pages from reloading
-    this.setState({
-        loading: true,
-        generatedURL: ''
-            })
-
-        //validate input
+        // Validate the input the user has sumbitted
         var isFormValid = await this.validateInput()
         if (!isFormValid) {
             return
         }
 
-
-        //use characters to generate url by calliing nanoid
-        //be sure to change my domain to miniurlit
+        //If the user has input a prefered alias then we use it, if not, we generate one
+        //Be sure to change miniURLit.com to your domain
         var generatedKey = nanoid(5);
-        var generatedURL = "miniURLit.com/" +generatedKey
+        var generatedURL = "miniURLit.com/" + generatedKey
 
-
-        if (this.state.preferedAlias !='') {
+        if (this.state.preferedAlias !== '') {
             generatedKey = this.state.preferedAlias
             generatedURL = "miniURLit.com/" + this.state.preferedAlias
         }
-        
-        //writing information to the database
+
         const db = getDatabase();
         set(ref(db, '/' + generatedKey), {
 
             generatedKey: generatedKey,
-            longUrl: this.state.longUrl,
+            longURL: this.state.longURL,
             preferedAlias: this.state.preferedAlias,
             generatedURL: generatedURL
 
-        }).then ((result) => {
+        }).then((result) => {
             this.setState({
                 generatedURL: generatedURL,
                 loading: false
             })
-
-
-        //handles error
         }).catch((e) => {
 
         })
-        
-};
+    };
 
-    //checks for an error
+    //Checks if feild has an error
     hasError = (key) => {
-        return this.setState.errors.indexOf(key) !== -1;
+        return this.state.errors.indexOf(key) !== -1;
     }
-    
-    //save the content of the form
-    handleChange= (e) => {
+
+
+    //Save the content of the form as the user is typing!
+    handleChange = (e) => {
         const { id, value } = e.target
         this.setState(prevState => ({
             ...prevState,
             [id]: value
-    }))    
-
-}
-
-
-}
-
-
-validateInput = async () => {
-    var errors = [];
-    var errorMessage = this.state.errorMessage
-
-
-    //validate long url
-    if (this.state.longURL.length === 0) {
-        errors.push("longURL");
-        errorMessages['longURL'] = 'Please enter your URL!';
-    } else if (!isWebUri(this.state.longURL)) {
-        errors.push("longURL");
-        errorMessages['longURL'] = 'Please a URL in the form of https://www....';
+        }))
     }
 
-    //preferred alias checking for correct params
-    if (this.state.preferedAlias !=='') {
-        if (this.state.preferredAlias.length > 7) {
-            errors.push("suggestedAlias");
-            errorMessages['suggestedAlias'] = 'Spaces are not allowed in URLS;'
+
+
+    validateInput = async () => {
+        var errors = [];
+        var errorMessages = this.state.errorMessage
+
+        //Validate Long URL
+        if (this.state.longURL.length === 0) {
+            errors.push("longURL");
+            errorMessages['longURL'] = 'Please enter your URL!';
+        } else if (!isWebUri(this.state.longURL)) {
+            errors.push("longURL");
+            errorMessages['longURL'] = 'Please a URL in the form of https://www....';
         }
 
-        //checks databvse to see if it already exists
-        var keyExists = await this.checkKeyExists()
-        if (keyExists.Exists()) {
-            errors.push("suggestedAlias");
-            errpors.errorMessages['suggestedAlias'] = 'The Alias you have entered already exists! Please enter amother one =-)';
+        //Prefered Alias
+        if (this.state.preferedAlias !== '') {
+            if (this.state.preferedAlias.length > 7) {
+                errors.push("suggestedAlias");
+                errorMessages['suggestedAlias'] = 'Please Enter an Alias less than 7 Characters';
+            } else if (this.state.preferedAlias.indexOf(' ') >= 0) {
+                errors.push("suggestedAlias");
+                errorMessages['suggestedAlias'] = 'Spaces are not allowed in URLS';
+            }
+
+            var keyExists = await this.checkKeyExists()
+
+            if (keyExists.exists()) {
+                errors.push("suggestedAlias");
+                errorMessages['suggestedAlias'] = 'The Alias you have entered already exists! Please enter another one =-)';
+            }
         }
-        
-        
+
+        this.setState({
+            errors: errors,
+            errorMessages: errorMessages,
+            loading: false
+        });
+
+        if (errors.length > 0) {
+            return false;
+        }
+
+        return true;
     }
 
-    //updates state of the page
-    this.setState({
-        errors: errors,
-        errorMessages: errorMessages,
-        loaing: false
-    });
 
-    if (errors.length > 0) {
-        return false;
-    }
-
-    return true;
-
-    //checks if the key exists in db and fetches 
     checkKeyExists = async () => {
-        const dbRref = ref(getDatabase());
-        return get(child(dbRef, '/${this.state.preferedAlias}')).catch((error) => {
+        const dbRef = ref(getDatabase());
+        return get(child(dbRef, `/${this.state.preferedAlias}`)).catch((error) => {
             return false
         });
     }
 
-    //copying to clipboard after clicked
-    copytoClipBoard = () => {
-        naviagtor.clipboard.writeText(this.state.generatedURL)
+    copyToClipBoard = () => {
+        navigator.clipboard.writeText(this.state.generatedURL)
         this.setState({
             toolTipMessage: 'Copied!'
-
         })
     }
 
-    render() 
+
+
+    render() {
         return (
             <div className="container">
                 <form autoComplete="off">
@@ -257,12 +245,7 @@ validateInput = async () => {
             </div>
         );
     }
+}
 
 
 export default Form;
-
-
-
-
-
-
