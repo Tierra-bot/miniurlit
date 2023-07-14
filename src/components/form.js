@@ -1,4 +1,4 @@
-import React from "react";
+import react from "react";
 import{ nanoid } from 'nanoid'
 import { getDatabase, child, ref, set, get } from "firebase/database";
 import { isWebUri } from 'valid-url';
@@ -220,7 +220,7 @@ validateInput = async () => {
                                 </div> :
                                 <div>
                                     <span className="visually-hidden spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                    <span>Mini Link It</span>
+                                    <span>Mini URL It</span>
                                 </div>
                         }
 
